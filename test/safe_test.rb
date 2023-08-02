@@ -82,6 +82,16 @@ class SafeTest < Minitest::Test
     assert_equal result, 'Yatta!'
   end
 
+  def test_FakeFS_method_locks
+    FakeFS.activate!
+    File.open('myfile.txt', 'w') do |f|
+      assert_equal f.flock(File::LOCK_EX), 0
+      assert_equal f.flock(File::LOCK_NB | File::LOCK_EX), false
+      assert_equal f.flock(File::LOCK_UN), 0
+      assert_equal f.flock(File::LOCK_NB | File::LOCK_EX), 0
+    end
+  end
+
   def test_FakeFS_method_does_not_deactivate_FakeFS_if_already_activated
     FakeFS.activate!
     FakeFS {}
