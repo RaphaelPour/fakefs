@@ -583,8 +583,27 @@ module FakeFS
       self.class.ctime(@path)
     end
 
-    def flock(*)
-      raise NotImplementedError
+    def flock(flags_int)
+      flags_int.is_a?(Integer) || raise(
+        TypeError, "can't convert String into Integer"
+      )
+
+      flags_int.positive? || raise(
+        Errno::EINVAL, flags_int
+      )
+
+      @monitor ||= Monitor.new
+
+      return false if (flags_int & RealFile::LOCK_NB).positive? && (@monitor.mon_locked? || @lock)
+
+      @monitor.synchronize do
+        if (flags_int & RealFile::LOCK_UN).positive?
+          @lock = false
+        elsif (flags_int & (RealFile::LOCK_EX | RealFile::LOCK_SH)).positive?
+          @lock = true
+        end
+      end
+      0
     end
 
     def mtime
