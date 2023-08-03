@@ -90,6 +90,22 @@ class SafeTest < Minitest::Test
       assert_equal f.flock(File::LOCK_UN), 0
       assert_equal f.flock(File::LOCK_NB | File::LOCK_EX), 0
     end
+  ensure
+    ::FakeFS.deactivate!
+  end
+
+  def test_FakeFS_method_locks_persist
+    FakeFS.activate!
+    File.open('myotherfile.txt', 'w') do |f1|
+      assert_equal f1.flock(File::LOCK_EX), 0
+    end
+
+    File.open('myotherfile.txt', 'w') do |f2|
+      refute f2.flock(File::LOCK_NB | File::LOCK_EX)
+    end
+
+  ensure
+    ::FakeFS.deactivate!
   end
 
   def test_FakeFS_method_does_not_deactivate_FakeFS_if_already_activated
