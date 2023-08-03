@@ -495,6 +495,7 @@ module FakeFS
       @mode = mode.is_a?(Hash) ? (mode[:mode] || READ_ONLY) : mode
       @file = FileSystem.find(path)
       @autoclose = true
+      @locked = false
 
       check_modes!
 
@@ -594,13 +595,13 @@ module FakeFS
 
       @monitor ||= Monitor.new
 
-      return false if (flags_int & RealFile::LOCK_NB).positive? && (@monitor.mon_locked? || @lock)
+      return false if (flags_int & RealFile::LOCK_NB).positive? && @locked
 
       @monitor.synchronize do
         if (flags_int & RealFile::LOCK_UN).positive?
-          @lock = false
-        elsif (flags_int & (RealFile::LOCK_EX | RealFile::LOCK_SH)).positive?
-          @lock = true
+          @locked = false
+        elsif ((flags_int & RealFile::LOCK_EX) || (flags_int & RealFile::LOCK_SH)).positive?
+          @locked = true
         end
       end
       0
